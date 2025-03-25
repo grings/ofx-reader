@@ -10,13 +10,15 @@ unit ofxreader;
 
 interface
 
-uses Classes, SysUtils, DateUtils;
+uses
+  Classes, SysUtils, DateUtils;
 
+{$WARN NO_RETVAL OFF}
 type
   TOFXItem = class
-    MovType: String;
+    MovType: string;
     MovDate: TDateTime;
-    Value: String;
+    Value: string;
     ID: string;
     RefNum: string;
     Document: string;
@@ -26,18 +28,19 @@ type
 
   TOFXReader = class(TComponent)
   public
-    BankID: String;
+    BankID: string;
     BranchID: string;
     AccountID: string;
     AccountType: string;
     DateStart: string;
     DateEnd: string;
-    FinalBalance: String;
+    FinalBalance: string;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function Import: boolean;
+    function Import: Boolean;
     function Get(iIndex: integer): TOFXItem;
     function Count: integer;
+    procedure FormatOFX(const InputFile, OutputFile: string);
   private
     FOFXFile: string;
     FOFXContent: string;
@@ -46,9 +49,10 @@ type
     procedure Delete(iIndex: integer);
     function Add: TOFXItem;
     function InfLine(sLine: string): string;
-    function FindString(sSubString, sString: string): boolean;
+    function FindString(sSubString, sString: string): Boolean;
     function ConvertDate(DataStr: string): TDateTime;
   protected
+    function GetBetween(Str, StrStart, StrEnd: string): string;
   published
     property OFXFile: string read FOFXFile write FOFXFile;
     property OFXContent: string read FOFXContent write FOFXContent;
@@ -86,9 +90,9 @@ end;
 
 function TOFXReader.ConvertDate(DataStr: string): TDateTime;
 var
-  Timestamp: Int64;
   FS: TFormatSettings;
 begin
+
   FS := TFormatSettings.Create('pt-BR');
   try
     FS.ShortDateFormat := 'ddmmyyyy';
@@ -109,11 +113,28 @@ begin
   Result := TOFXItem(FListItems.Items[iIndex]);
 end;
 
-function TOFXReader.Import: boolean;
+function TOFXReader.GetBetween(Str, StrStart, StrEnd: string): string;
+var
+  iPosIni: Integer;
+  iPosFim: Integer;
+begin
+  Result := '';
+  iPosIni := Pos(StrStart, Str);
+
+  if iPosIni <> 0 then
+  begin
+    System.Delete(Str, 1, iPosIni + Length(StrStart) - 1);
+    iPosFim := Pos(StrEnd, Str);
+    System.Delete(Str, iPosFim, Length(Str));
+    Result := Str;
+  end;
+end;
+
+function TOFXReader.Import: Boolean;
 var
   oFile: TStringList;
   i: integer;
-  bOFX: boolean;
+  bOFX: Boolean;
   oItem: TOFXItem;
   sLine: string;
 begin
@@ -121,8 +142,10 @@ begin
   DateStart := '';
   DateEnd := '';
   bOFX := false;
+
   if (FOFXContent = '') and (not FileExists(FOFXFile)) then
     raise Exception.Create('File not found!');
+
   oFile := TStringList.Create;
   try
     if (FOFXContent = '') then
@@ -135,6 +158,7 @@ begin
     end
     else
       oFile.Add(FOFXContent);
+
     i := 0;
 
     while i < oFile.Count do
@@ -167,8 +191,8 @@ begin
           if Trim(sLine) <> '' then
           begin
             try
-              DateStart :=
-                DateToStr(EncodeDate(StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
+              DateStart := DateToStr(EncodeDate(
+                StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
                 StrToIntDef(Copy(InfLine(sLine), 5, 2), 0),
                 StrToIntDef(Copy(InfLine(sLine), 7, 2), 0)));
             except
@@ -181,8 +205,8 @@ begin
           if Trim(sLine) <> '' then
           begin
             try
-              DateEnd :=
-                DateToStr(EncodeDate(StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
+              DateEnd := DateToStr(EncodeDate(
+                StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
                 StrToIntDef(Copy(InfLine(sLine), 5, 2), 0),
                 StrToIntDef(Copy(InfLine(sLine), 7, 2), 0)));
             except
@@ -208,8 +232,7 @@ begin
             begin
               if (InfLine(sLine) = '0') or (InfLine(sLine) = 'CREDIT') or (InfLine(sLine) = 'CREDITO') or (InfLine(sLine) = 'DEP') then
                 oItem.MovType := 'C'
-              else
-              if (InfLine(sLine) = '1') or (InfLine(sLine) = 'DEBIT') or (InfLine(sLine) = 'DEBITO') or (InfLine(sLine) = 'XFER') then
+              else if (InfLine(sLine) = '1') or (InfLine(sLine) = 'DEBIT') or (InfLine(sLine) = 'DEBITO') or (InfLine(sLine) = 'XFER') then
                 oItem.MovType := 'D'
               else
                 oItem.MovType := 'OTHER';
@@ -219,8 +242,8 @@ begin
               if Copy(InfLine(sLine), 1, 4) <> '' then
               begin
                 try
-                  oItem.MovDate :=
-                    EncodeDate(StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
+                  oItem.MovDate := EncodeDate(
+                    StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
                     StrToIntDef(Copy(InfLine(sLine), 5, 2), 0),
                     StrToIntDef(Copy(InfLine(sLine), 7, 2), 0));
                 except
@@ -228,13 +251,13 @@ begin
                 end;
               end;
 
-            if (BankID <> '') and (StrToInt(BankID) = 341) and (oItem.MovDate = 0) and FindString('<FITID>', sLine)  then
+            if (BankID <> '') and (StrToInt(BankID) = 341) and (oItem.MovDate = 0) and FindString('<FITID>', sLine) then
             begin
               try
-                oItem.MovDate :=
-                    EncodeDate(StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
-                    StrToIntDef(Copy(InfLine(sLine), 5, 2), 0),
-                    StrToIntDef(Copy(InfLine(sLine), 7, 2), 0));
+                oItem.MovDate := EncodeDate(
+                  StrToIntDef(Copy(InfLine(sLine), 1, 4), 0),
+                  StrToIntDef(Copy(InfLine(sLine), 5, 2), 0),
+                  StrToIntDef(Copy(InfLine(sLine), 7, 2), 0));
               except
                 oItem.MovDate := ConvertDate(InfLine(sLine));
               end;
@@ -297,9 +320,77 @@ begin
   Result := oItem;
 end;
 
-function TOFXReader.FindString(sSubString, sString: string): boolean;
+function TOFXReader.FindString(sSubString, sString: string): Boolean;
 begin
   Result := Pos(UpperCase(sSubString), UpperCase(sString)) > 0;
+end;
+
+procedure TOFXReader.FormatOFX(const InputFile, OutputFile: string);
+var
+  Input, Output: TStringList;
+  i, Indent: Integer;
+  Line, CurrentTag: string;
+  InTag: Boolean;
+
+  function TrimTags(const S: string): string;
+  begin
+    Result := StringReplace(StringReplace(S, '<', '', []), '>', '', []);
+  end;
+
+begin
+  Input := TStringList.Create;
+  Output := TStringList.Create;
+  try
+    Input.LoadFromFile(InputFile);
+
+    Indent := 0;
+    InTag := False;
+
+    for i := 0 to Input.Count - 1 do
+    begin
+      Line := Trim(Input[i]);
+
+      if Line = '' then
+        Continue;
+
+      while Length(Line) > 0 do
+      begin
+        if Line[1] = '<' then
+        begin
+          if Pos('</', Line) = 1 then
+            Dec(Indent);
+
+          CurrentTag := Copy(Line, 1, Pos('>', Line));
+          Line := Copy(Line, Pos('>', Line) + 1, MaxInt);
+
+          if (Length(Line) > 0) and (Line[1] <> '<') then
+          begin
+            // Tag com valor curto fica na mesma linha
+            Output.Add(StringOfChar(' ', Indent * 4) + CurrentTag + Trim(Copy(Line, 1, Pos('<', Line) - 1)) + Copy(Line, Pos('<', Line), Pos('>', Line) - Pos('<', Line)));
+            Line := Copy(Line, Pos('>', Line) + 1, MaxInt);
+          end
+          else
+            Output.Add(StringOfChar(' ', Indent * 4) + CurrentTag);
+
+          if (Pos('</', CurrentTag) = 0) and (Pos('/>', CurrentTag) = 0) and (Line = '') then
+            Inc(Indent);
+        end
+        else
+        begin
+          if Output.Count > 0 then
+            Output[Output.Count - 1] := Output[Output.Count - 1] + Trim(Line)
+          else
+            Output.Add(StringOfChar(' ', Indent * 4) + Trim(Line));
+          Line := '';
+        end;
+      end;
+    end;
+
+    Output.SaveToFile(OutputFile);
+  finally
+    Input.Free;
+    Output.Free;
+  end;
 end;
 
 procedure Register;
@@ -308,3 +399,4 @@ begin
 end;
 
 end.
+
