@@ -330,7 +330,6 @@ var
   Input, Output: TStringList;
   i, Indent: Integer;
   Line, CurrentTag: string;
-  InTag: Boolean;
 
   function TrimTags(const S: string): string;
   begin
@@ -344,7 +343,6 @@ begin
     Input.LoadFromFile(InputFile);
 
     Indent := 0;
-    InTag := False;
 
     for i := 0 to Input.Count - 1 do
     begin
@@ -399,4 +397,3 @@ begin
 end;
 
 end.
-
