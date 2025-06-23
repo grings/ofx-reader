@@ -1,4 +1,4 @@
-//
+﻿//
 // OFX - Open Financial Exchange
 // OFC - Open Financial Connectivity
 
@@ -14,6 +14,7 @@ uses
   Classes, SysUtils, DateUtils;
 
 {$WARN NO_RETVAL OFF}
+{$WARN WIDECHAR_REDUCED OFF}
 type
   TOFXItem = class
     MovType: string;
@@ -41,7 +42,8 @@ type
     function Get(iIndex: integer): TOFXItem;
     function Count: integer;
     procedure FormatOFX(const InputFile, OutputFile: string);
-    function ParseCurrency(const S: string): Double;
+    function ConvertCurrency(const S: string): Double;
+    function ConvertDate(DataStr: string): TDateTime;
   private
     FOFXFile: string;
     FOFXContent: string;
@@ -51,7 +53,6 @@ type
     function Add: TOFXItem;
     function InfLine(sLine: string): string;
     function FindString(sSubString, sString: string): Boolean;
-    function ConvertDate(DataStr: string): TDateTime;
   protected
     function GetBetween(Str, StrStart, StrEnd: string): string;
   published
@@ -312,7 +313,7 @@ begin
   end;
 end;
 
-function TOFXReader.ParseCurrency(const S: string): Double;
+function TOFXReader.ConvertCurrency(const S: string): Double;
 var
   FS: TFormatSettings;
   CleanStr: string;
@@ -347,7 +348,7 @@ begin
   FS.DecimalSeparator := DecimalSep;
 
   if not TryStrToFloat(CleanStr, Result, FS) then
-    raise Exception.CreateFmt('Valor inv�lido: %s', [S]);
+    raise Exception.CreateFmt('Valor inválido: %s', [S]);
 end;
 
 function TOFXReader.Add: TOFXItem;
