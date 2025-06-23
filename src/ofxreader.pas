@@ -347,7 +347,7 @@ begin
   FS.DecimalSeparator := DecimalSep;
 
   if not TryStrToFloat(CleanStr, Result, FS) then
-    raise Exception.CreateFmt('Valor inválido: %s', [S]);
+    raise Exception.CreateFmt('Valor invï¿½lido: %s', [S]);
 end;
 
 function TOFXReader.Add: TOFXItem;
