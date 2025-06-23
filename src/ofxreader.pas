@@ -41,6 +41,7 @@ type
     function Get(iIndex: integer): TOFXItem;
     function Count: integer;
     procedure FormatOFX(const InputFile, OutputFile: string);
+    function ParseCurrency(const S: string): Double;
   private
     FOFXFile: string;
     FOFXContent: string;
@@ -311,6 +312,44 @@ begin
   end;
 end;
 
+function TOFXReader.ParseCurrency(const S: string): Double;
+var
+  FS: TFormatSettings;
+  CleanStr: string;
+  LastDot, LastComma, LastSep: Integer;
+  DecimalSep: Char;
+begin
+  FS := FormatSettings;
+
+  LastDot := LastDelimiter('.', S);
+  LastComma := LastDelimiter(',', S);
+
+  if LastDot > LastComma then
+  begin
+    DecimalSep := '.';
+    LastSep := LastDot;
+  end
+  else
+  begin
+    DecimalSep := ',';
+    LastSep := LastComma;
+  end;
+
+  CleanStr := '';
+  for var I := 1 to Length(S) do
+  begin
+    if (I = LastSep) then
+      CleanStr := CleanStr + DecimalSep
+    else if not (S[I] in ['.', ',']) then
+      CleanStr := CleanStr + S[I];
+  end;
+
+  FS.DecimalSeparator := DecimalSep;
+
+  if not TryStrToFloat(CleanStr, Result, FS) then
+    raise Exception.CreateFmt('Valor inválido: %s', [S]);
+end;
+
 function TOFXReader.Add: TOFXItem;
 var
   oItem: TOFXItem;
@@ -330,7 +369,6 @@ var
   Input, Output: TStringList;
   i, Indent: Integer;
   Line, CurrentTag: string;
-  InTag: Boolean;
 
   function TrimTags(const S: string): string;
   begin
@@ -344,7 +382,6 @@ begin
     Input.LoadFromFile(InputFile);
 
     Indent := 0;
-    InTag := False;
 
     for i := 0 to Input.Count - 1 do
     begin
@@ -399,4 +436,3 @@ begin
 end;
 
 end.
-
